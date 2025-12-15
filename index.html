@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>Spin The Bottle Multiplayer</title>
+<title>Spin The Bottle Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -13,7 +13,7 @@ body{
   color:white;
   text-align:center;
 }
-h1{color:#ff7ad9;margin:16px 0}
+h1{color:#ff7ad9;margin:16px}
 button,input{
   padding:10px 14px;
   margin:6px;
@@ -21,61 +21,42 @@ button,input{
   border:none;
   font-size:14px;
 }
-button{
-  background:linear-gradient(135deg,#ff7ad9,#7c7cff);
-  color:white;
-  cursor:pointer;
-}
-input{
-  background:#1a1a25;
-  color:white;
-  border:1px solid #ff7ad9;
-}
+button{background:linear-gradient(135deg,#ff7ad9,#7c7cff);color:white}
+input{background:#1a1a25;color:white;border:1px solid #ff7ad9}
 .hidden{display:none}
 
 .game-area{
-  width:420px;height:420px;
-  margin:20px auto;
+  width:360px;height:360px;
+  margin:16px auto;
   position:relative;
   border-radius:50%;
-  background:conic-gradient(#ff7ad9,#7c7cff,#6dffb8,#ffd86d,#ff7ad9);
+  background:conic-gradient(#ff7ad9,#7c7cff,#6dffb8,#ffd86d,#ff7ad9)
 }
 .bottle{
   position:absolute;
   top:50%;left:50%;
-  width:160px;height:160px;
-  background:url("https://i.ibb.co/nqVdXy8v/image-1.png") center no-repeat;
-  background-size:contain;
+  width:140px;height:140px;
+  background:url("https://i.ibb.co/nqVdXy8v/image-1.png") center/contain no-repeat;
   transform:translate(-50%,-50%) rotate(0deg);
-  transition:transform 4s ease-out;
+  transition:transform 4s ease-out
 }
 .player{
   position:absolute;
   transform:translate(-50%,-50%);
-  font-size:13px;
-  font-weight:600;
+  font-size:12px;font-weight:600
 }
 .host{color:#ffd86d}
 
 #chat{
-  width:90%;
-  max-width:420px;
+  width:90%;max-width:360px;
   margin:10px auto;
   background:#12121a;
   border-radius:8px;
-  padding:8px;
+  padding:6px
 }
 #messages{
-  height:120px;
-  overflow-y:auto;
-  text-align:left;
-  font-size:13px;
+  height:120px;overflow-y:auto;text-align:left;font-size:12px
 }
-#messages div{margin:4px 0}
-
-.question-box{margin:12px;font-size:16px}
-.truth{background:#b66dff}
-.dare{background:#ff4d9d}
 </style>
 </head>
 
@@ -83,20 +64,33 @@ input{
 
 <h1>Spin The Bottle</h1>
 
-<div id="setup">
+<div id="home">
+  <button onclick="normalMode()">Normal Mode</button><br>
+  <button onclick="multiMode()">Multiplayer</button>
+</div>
+
+<div id="normal" class="hidden">
+  <input id="nName" placeholder="Player name">
+  <button onclick="addN()">Add</button>
+  <button onclick="startNormal()">Start</button>
+</div>
+
+<div id="multi" class="hidden">
   <button onclick="createRoom()">Create Room</button><br>
   <input id="joinCode" placeholder="Room Code">
-  <button onclick="joinRoom()">Join Room</button>
+  <button onclick="joinRoom()">Join</button>
 </div>
 
 <div id="lobby" class="hidden">
   <h3>Room <span id="roomCode"></span></h3>
   <input id="playerName" placeholder="Your name">
-  <button onclick="joinGame()">Join</button>
+  <button onclick="joinGame()">Join Game</button>
 
-  <div id="expiryBox" class="hidden">
-    <input id="expiryMinutes" placeholder="Room expiry in minutes">
-    <button onclick="setExpiry()">Set Expiry</button>
+  <div id="customBox" class="hidden">
+    <input id="cTruth" placeholder="Add Truth">
+    <button onclick="addTruth()">Add Truth</button><br>
+    <input id="cDare" placeholder="Add Dare">
+    <button onclick="addDare()">Add Dare</button>
   </div>
 
   <p id="playersList"></p>
@@ -105,26 +99,26 @@ input{
 
 <div id="game" class="hidden">
   <p id="turnInfo"></p>
-
   <div class="game-area" id="area">
     <div class="bottle" id="bottle"></div>
   </div>
-
   <h3 id="result">Waiting</h3>
 
   <div id="tdBox" class="hidden">
-    <button class="truth" onclick="pickTruth()">Truth</button>
-    <button class="dare" onclick="pickDare()">Dare</button>
+    <button onclick="pickTruth()">Truth</button>
+    <button onclick="pickDare()">Dare</button>
   </div>
-
-  <div class="question-box" id="question"></div>
 
   <div id="chat">
     <div id="messages"></div>
-    <input id="chatInput" placeholder="Type message">
-    <button onclick="sendMessage()">Send</button>
+    <input id="chatInput">
+    <button onclick="sendMsg()">Send</button>
   </div>
 </div>
+
+<audio id="spinSound">
+  <source src="https://files.catbox.moe/x821vj.mp3">
+</audio>
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js"
@@ -136,51 +130,48 @@ const app=initializeApp({
 })
 const db=getDatabase(app)
 
-const defaultTruths=[
+const truths=[
 "Sabse risky kaam kya kiya",
-"Kis cheez se secretly darte ho",
-"Kabhi jhooth bola hai bina reason",
+"Kis baat se darte ho",
+"Kabhi jhooth bola bina reason",
 "Instant regret kab hua",
-"Kis pe trust nahi hota",
-"Kabhi rule todna exciting laga",
+"Kispe trust nahi",
+"Kabhi rule todna fun laga",
 "Kis habit se chutkara chahte ho",
 "Kya tum overthink karte ho",
 "Kis cheez pe control nahi",
-"Kya dare pasand hai"
+"Truth ya Dare kya pasand"
 ]
 
-const defaultDares=[
-"10 second freeze",
+const dares=[
+"10 sec freeze",
 "Naam ulta likho",
 "Agle round mein bina soche choose",
 "Serious face 5 sec",
 "Kisi ko shoutout do",
-"Emoji mein reply do",
+"Emoji mein reply",
 "Game ko 1 word mein batao",
 "Deep breath lo",
-"Agle spin ka hype banao",
+"Hype banao",
 "Sabko convince karo"
 ]
 
 let roomId="",myName="",isHost=false
 let players=[],turn=0,state="idle",rotation=0
-let expiryTimer=null
+let customTruths=[],customDares=[]
 
 const params=new URLSearchParams(location.search)
-if(params.get("room")){
-  joinCode.value=params.get("room")
-}
+if(params.get("room")) joinCode.value=params.get("room")
+
+window.normalMode=()=>{home.classList.add("hidden");normal.classList.remove("hidden")}
+window.multiMode=()=>{home.classList.add("hidden");multi.classList.remove("hidden")}
 
 window.createRoom=()=>{
   roomId=Math.random().toString(36).slice(2,8).toUpperCase()
   isHost=true
   set(ref(db,"rooms/"+roomId),{
-    players:[],
-    host:"",
-    turn:0,
-    state:"idle",
-    started:false,
-    messages:{}
+    players:[],host:"",turn:0,state:"idle",
+    customTruths:[],customDares:[],started:false,messages:{}
   })
   openLobby()
 }
@@ -191,60 +182,34 @@ window.joinRoom=()=>{
 }
 
 function openLobby(){
-  setup.classList.add("hidden")
+  multi.classList.add("hidden")
   lobby.classList.remove("hidden")
   roomCode.innerText=roomId
 
   onValue(ref(db,"rooms/"+roomId),(s)=>{
-    const d=s.val()
-    if(!d)return
+    const d=s.val(); if(!d)return
     players=d.players||[]
-    turn=d.turn
-    state=d.state
+    turn=d.turn||0
+    state=d.state||"idle"
+    customTruths=d.customTruths||[]
+    customDares=d.customDares||[]
 
-    playersList.innerHTML=players.map(p=>{
-      return `<span onclick="kick('${p.name}')">${p.name}${p.name===d.host?" 👑":""}</span>`
-    }).join(" , ")
+    playersList.innerHTML=players.map(p=>p.name+(p.name===d.host?" 👑":"")).join(", ")
 
-    if(isHost) expiryBox.classList.remove("hidden")
-
-    if(d.started){
-      lobby.classList.add("hidden")
-      game.classList.remove("hidden")
-      renderPlayers()
-      listenChat()
-      updateTurn()
-    }
+    if(isHost && !d.started) customBox.classList.remove("hidden")
+    if(d.started){ lobby.classList.add("hidden"); game.classList.remove("hidden"); renderPlayers(); updateTurn(); listenChat() }
   })
 }
 
 window.joinGame=()=>{
   myName=playerName.value.trim()
-  if(!myName)return
-  if(players.find(p=>p.name===myName))return
+  if(!myName||players.find(p=>p.name===myName)||players.length>=20)return
   players.push({name:myName})
-  update(ref(db,"rooms/"+roomId),{
-    players:players,
-    host:players[0].name
-  })
+  update(ref(db,"rooms/"+roomId),{players:players,host:players[0].name})
 }
 
-window.kick=(name)=>{
-  if(!isHost||name===myName)return
-  players=players.filter(p=>p.name!==name)
-  update(ref(db,"rooms/"+roomId),{players:players})
-}
-
-window.setExpiry=()=>{
-  if(!isHost)return
-  const min=parseInt(expiryMinutes.value)
-  if(!min)return
-  setTimeout(()=>{
-    set(ref(db,"rooms/"+roomId),null)
-    alert("Room expired")
-    location.reload()
-  },min*60000)
-}
+window.addTruth=()=>{ if(isHost){ customTruths.push(cTruth.value); update(ref(db,"rooms/"+roomId),{customTruths}); cTruth.value=""}}
+window.addDare=()=>{ if(isHost){ customDares.push(cDare.value); update(ref(db,"rooms/"+roomId),{customDares}); cDare.value=""}}
 
 window.startGame=()=>{
   if(!isHost||players.length<2)return
@@ -253,15 +218,13 @@ window.startGame=()=>{
 
 function renderPlayers(){
   area.innerHTML='<div class="bottle" id="bottle"></div>'
-  const r=170,c=210,step=360/players.length
+  const r=150,c=180,step=360/players.length
   players.forEach((p,i)=>{
     const a=(step*i-90)*Math.PI/180
-    const x=c+r*Math.cos(a)
-    const y=c+r*Math.sin(a)
     const d=document.createElement("div")
     d.className="player"
-    d.style.left=x+"px"
-    d.style.top=y+"px"
+    d.style.left=c+r*Math.cos(a)+"px"
+    d.style.top=c+r*Math.sin(a)+"px"
     d.innerText=p.name
     area.appendChild(d)
   })
@@ -278,17 +241,13 @@ function updateTurn(){
 function spin(){
   const i=Math.floor(Math.random()*players.length)
   update(ref(db,"rooms/"+roomId),{state:"spinning",selected:i})
-  animateSpin(i)
-}
-
-function animateSpin(i){
+  spinSound.play()
   const angle=360/players.length*i+90
   rotation+=360*4+angle
   bottle.style.transform=`translate(-50%,-50%) rotate(${rotation}deg)`
-  result.innerText="Selected "+players[i].name
   setTimeout(()=>{
-    tdBox.classList.remove("hidden")
     update(ref(db,"rooms/"+roomId),{state:"choosing"})
+    tdBox.classList.remove("hidden")
   },4000)
 }
 
@@ -297,26 +256,22 @@ window.pickDare=()=>finish("Dare")
 
 function finish(type){
   if(players[turn].name!==myName)return
-  const list=type==="Truth"?defaultTruths:defaultDares
-  question.innerText=type+": "+list[Math.floor(Math.random()*list.length)]
+  const list=(type==="Truth"?(customTruths.length?customTruths:truths):(customDares.length?customDares:dares))
+  result.innerText=type+": "+list[Math.floor(Math.random()*list.length)]
   tdBox.classList.add("hidden")
-  update(ref(db,"rooms/"+roomId),{
-    turn:(turn+1)%players.length,
-    state:"idle"
-  })
+  update(ref(db,"rooms/"+roomId),{turn:(turn+1)%players.length,state:"idle"})
 }
 
 function listenChat(){
   onValue(ref(db,"rooms/"+roomId+"/messages"),s=>{
     messages.innerHTML=""
-    const m=s.val()||{}
-    Object.values(m).forEach(x=>{
-      messages.innerHTML+=`<div><b>${x.name}:</b> ${x.text}</div>`
+    Object.values(s.val()||{}).forEach(m=>{
+      messages.innerHTML+=`<div><b>${m.name}:</b> ${m.text}</div>`
     })
   })
 }
 
-window.sendMessage=()=>{
+window.sendMsg=()=>{
   const t=chatInput.value.trim()
   if(!t)return
   push(ref(db,"rooms/"+roomId+"/messages"),{name:myName,text:t})
